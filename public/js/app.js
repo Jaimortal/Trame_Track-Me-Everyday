@@ -52,7 +52,8 @@ class TrameApp {
     this.initCustomTimePicker();
     this.renderMonthNavLinks();
     
-    // Initial data load from JSON database & Malaybalay weather
+    // Initial data load from JSON database, Malaybalay weather & DB-stored dark mode
+    await this.syncThemeFromDb();
     await this.loadWeather();
     await this.loadTasks();
 
@@ -89,7 +90,7 @@ class TrameApp {
     return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
   }
 
-  // Theme Management (Light / Night Mode)
+  // Theme Management (Light / Night Mode) - Synchronized with JSON database
   setupTheme() {
     const savedTheme = localStorage.getItem('trame-theme') || 'light';
     const isDark = savedTheme === 'dark';
@@ -97,12 +98,35 @@ class TrameApp {
     this.updateThemeIcon(isDark);
   }
 
-  toggleTheme() {
+  async syncThemeFromDb() {
+    try {
+      const settings = await API.getSettings();
+      if (settings && settings.darkMode !== undefined) {
+        const isDark = Boolean(settings.darkMode);
+        document.documentElement.classList.toggle('dark', isDark);
+        localStorage.setItem('trame-theme', isDark ? 'dark' : 'light');
+        this.updateThemeIcon(isDark);
+        if (window.weatherEngine) {
+          window.weatherEngine.startCanvasAnimation();
+        }
+      }
+    } catch (err) {
+      console.warn('Could not sync theme from JSON DB:', err);
+    }
+  }
+
+  async toggleTheme() {
     const isDark = document.documentElement.classList.toggle('dark');
     localStorage.setItem('trame-theme', isDark ? 'dark' : 'light');
     this.updateThemeIcon(isDark);
     if (window.weatherEngine) {
       window.weatherEngine.startCanvasAnimation();
+    }
+    // Persist to primary JSON database so it stays on what mode they left
+    try {
+      await API.updateSettings({ darkMode: isDark });
+    } catch (err) {
+      console.warn('Failed to save dark mode to JSON DB:', err);
     }
   }
 
@@ -311,8 +335,8 @@ class TrameApp {
           const isoDate = this.formatDateIso(dayDate);
           const isToday = isoDate === this.todayStr;
           
-          // Get tasks for this date
-          const dayTasks = this.tasks.filter(t => t.date === isoDate);
+          // Get tasks for this date (only active / incomplete tasks are shown on calendar dates)
+          const dayTasks = this.tasks.filter(t => t.date === isoDate && !t.completed);
           
           cellsHtml += `
             <div data-date="${isoDate}" class="calendar-cell rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 p-1 sm:p-2.5 flex flex-col justify-between cursor-pointer group shadow-sm ${isToday ? 'is-today' : ''}">
@@ -460,12 +484,13 @@ class TrameApp {
     const weekNum = this.getWeekNumber(dateObj);
     this.trackerDateSubtext.textContent = `Week ${weekNum} of ${y} • Primary Database: JSON`;
 
-    const dayTasks = this.tasks.filter(t => t.date === dateStr);
+    // Only active (incomplete) tasks are shown on this specific date
+    const dayTasks = this.tasks.filter(t => t.date === dateStr && !t.completed);
     this.tabTaskCount.textContent = dayTasks.length;
 
     this.renderDayTaskList(dayTasks);
 
-    // If no tasks exist on this date yet, or openAddTab is true, show form directly
+    // If no active tasks exist on this date yet, or openAddTab is true, show form directly
     if (dayTasks.length === 0 || openAddTab) {
       this.switchTrackerTab('add');
       this.resetTaskForm();
@@ -515,12 +540,27 @@ class TrameApp {
     if (!this.taskListContainer) return;
 
     if (!dayTasks || dayTasks.length === 0) {
+      const completedOnDate = this.tasks.filter(t => t.date === this.selectedDate && t.completed).length;
       this.taskListContainer.innerHTML = `
         <div class="py-8 text-center text-slate-400 dark:text-slate-500 space-y-2">
-          <i data-lucide="calendar-plus" class="w-8 h-8 mx-auto opacity-50"></i>
-          <p class="text-xs">No activities recorded for this date yet.</p>
+          <i data-lucide="${completedOnDate > 0 ? 'check-circle-2' : 'calendar-plus'}" class="w-8 h-8 mx-auto ${completedOnDate > 0 ? 'text-emerald-500/70' : 'opacity-50'}"></i>
+          <p class="text-xs font-semibold text-slate-700 dark:text-slate-300">
+            ${completedOnDate > 0 ? 'All activities for this date are completed!' : 'No activities recorded for this date yet.'}
+          </p>
+          ${completedOnDate > 0 ? `
+            <p class="text-[11px] text-slate-400 dark:text-slate-500">
+              Completed items (${completedOnDate}) can be reviewed in <button type="button" id="btnGoToCompletedModal" class="text-sky-600 dark:text-sky-400 underline font-semibold hover:opacity-80">Completed Tasks</button>.
+            </p>
+          ` : '<p class="text-[11px] text-slate-400">Click Add Activity to schedule a new task.</p>'}
         </div>
       `;
+      const btnGo = this.taskListContainer.querySelector('#btnGoToCompletedModal');
+      if (btnGo) {
+        btnGo.addEventListener('click', () => {
+          this.closeTrackerModal();
+          this.openCompletedModal();
+        });
+      }
       if (window.lucide) window.lucide.createIcons();
       return;
     }
@@ -719,8 +759,8 @@ class TrameApp {
 
       await this.loadTasks();
       
-      // Update modal view
-      const dayTasks = this.tasks.filter(t => t.date === this.selectedDate);
+      // Update modal view (only active / incomplete tasks)
+      const dayTasks = this.tasks.filter(t => t.date === this.selectedDate && !t.completed);
       this.tabTaskCount.textContent = dayTasks.length;
       this.renderDayTaskList(dayTasks);
       this.resetTaskForm();
@@ -735,10 +775,10 @@ class TrameApp {
     try {
       const res = await API.toggleTask(id);
       const isComp = res.task.completed;
-      this.showToast(isComp ? 'Activity marked completed!' : 'Activity marked pending', 'success');
+      this.showToast(isComp ? 'Activity marked as done! Moved to Completed.' : 'Activity restored to calendar', 'success');
       await this.loadTasks();
       
-      const dayTasks = this.tasks.filter(t => t.date === this.selectedDate);
+      const dayTasks = this.tasks.filter(t => t.date === this.selectedDate && !t.completed);
       this.tabTaskCount.textContent = dayTasks.length;
       this.renderDayTaskList(dayTasks);
     } catch (err) {
@@ -763,7 +803,7 @@ class TrameApp {
       this.showToast('Activity permanently deleted from JSON', 'info');
       await this.loadTasks();
 
-      const dayTasks = this.tasks.filter(t => t.date === this.selectedDate);
+      const dayTasks = this.tasks.filter(t => t.date === this.selectedDate && !t.completed);
       this.tabTaskCount.textContent = dayTasks.length;
       this.renderDayTaskList(dayTasks);
 
@@ -1387,6 +1427,27 @@ class TrameApp {
         e.target.closest('.priority-opt')?.classList.add('selected-priority');
       });
     });
+
+    // Floating Scroll To Top Button (Bottom-Right Circle)
+    const btnScrollTop = document.getElementById('btnScrollToTop');
+    if (btnScrollTop) {
+      window.addEventListener('scroll', () => {
+        if (window.scrollY > 250) {
+          btnScrollTop.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-3');
+          btnScrollTop.classList.add('opacity-100', 'pointer-events-auto', 'translate-y-0');
+        } else {
+          btnScrollTop.classList.add('opacity-0', 'pointer-events-none', 'translate-y-3');
+          btnScrollTop.classList.remove('opacity-100', 'pointer-events-auto', 'translate-y-0');
+        }
+      }, { passive: true });
+
+      btnScrollTop.addEventListener('click', () => {
+        window.scrollTo({
+          top: 0,
+          behavior: 'smooth'
+        });
+      });
+    }
 
     // Esc key close modals
     window.addEventListener('keydown', (e) => {

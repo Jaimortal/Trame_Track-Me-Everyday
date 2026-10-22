@@ -46,7 +46,8 @@ function initDb() {
           appName: 'trame',
           description: 'Track and Me - Activity & Task Calendar Tracker',
           version: '1.0.0',
-          city: 'Malaybalay City, Bukidnon'
+          city: 'Malaybalay City, Bukidnon',
+          darkMode: false
         },
         tasks: [
           {
@@ -314,6 +315,39 @@ app.get('/api/stats', (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET application preferences/settings (e.g. darkMode) from JSON database
+app.get('/api/settings', (req, res) => {
+  try {
+    const db = readDb();
+    const darkMode = db.meta && db.meta.darkMode !== undefined ? db.meta.darkMode : false;
+    res.json({
+      success: true,
+      settings: {
+        darkMode,
+        appName: db.meta?.appName || 'trame',
+        city: db.meta?.city || 'Malaybalay City, Bukidnon'
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST update application settings (saves dark mode directly into JSON database)
+app.post('/api/settings', (req, res) => {
+  try {
+    const db = readDb();
+    if (!db.meta) db.meta = {};
+    if (req.body.darkMode !== undefined) {
+      db.meta.darkMode = Boolean(req.body.darkMode);
+    }
+    writeDb(db);
+    res.json({ success: true, settings: db.meta });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to save settings to JSON database' });
   }
 });
 

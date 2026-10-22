@@ -133,6 +133,35 @@ const API = {
       console.error('Failed to fetch weather:', err);
       return null;
     }
+  },
+
+  // GET application settings (persisted in JSON database)
+  async getSettings() {
+    try {
+      const res = await fetch(`${this.BASE_URL}/settings`);
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      const data = await res.json();
+      return data.settings || {};
+    } catch (err) {
+      console.error('Failed to fetch settings from JSON DB:', err);
+      return {};
+    }
+  },
+
+  // POST update application settings (saves dark mode directly into JSON database)
+  async updateSettings(settings) {
+    try {
+      const res = await fetch(`${this.BASE_URL}/settings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
+      });
+      if (!res.ok) throw new Error('Failed to update settings in JSON DB');
+      return await res.json();
+    } catch (err) {
+      console.error('Failed to save settings:', err);
+      return null;
+    }
   }
 };
 

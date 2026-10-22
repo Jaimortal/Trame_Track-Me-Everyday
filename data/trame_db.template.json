@@ -3,7 +3,8 @@
     "appName": "trame",
     "description": "Track and Me - Activity & Task Calendar Tracker",
     "version": "1.0.0",
-    "city": "Malaybalay City, Bukidnon"
+    "city": "Malaybalay City, Bukidnon",
+    "darkMode": false
   },
   "tasks": [
     {
