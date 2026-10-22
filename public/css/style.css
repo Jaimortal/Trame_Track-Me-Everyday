@@ -1,0 +1,348 @@
+/* ========================================================
+   TRAME (Track & Me) — High-Performance Stylesheet
+   Optimized 60+ FPS Rendering, Instant Hover & Butter-Smooth Scroll
+   ======================================================== */
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* Custom subtle scrollbar */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.6);
+}
+
+/* Base Body & Zero Horizontal Side-Scrolling */
+html, body {
+  overflow-x: hidden !important;
+  max-width: 100vw !important;
+  width: 100% !important;
+  position: relative;
+  box-sizing: border-box;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background-color: #f8fafc;
+  color: #1e293b;
+}
+
+html.dark body {
+  background-color: #0b1120;
+  color: #f1f5f9;
+}
+
+/* Camera Notch / Dynamic Island Safe-Area Padding for Mobile Devices */
+.safe-top-pad {
+  padding-top: max(10px, env(safe-area-inset-top, 10px));
+}
+
+/* Body scroll lock when any modal is open */
+body.modal-open {
+  overflow: hidden !important;
+  touch-action: none;
+}
+
+/* Modal Scroll Isolation — Stops scroll from leaking to background calendar */
+.modal-overlay {
+  overscroll-behavior: contain !important;
+}
+
+.modal-scroll-area {
+  overscroll-behavior: contain !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Fast Priority Radio Selector (Zero lag, no expensive CSS selectors) */
+.priority-opt {
+  user-select: none;
+  transition: border-color 0.05s ease, background-color 0.05s ease;
+}
+.priority-opt input:checked + span {
+  transform: scale(1.15);
+}
+.priority-opt.selected-priority,
+.priority-opt:has(input:checked) {
+  border-color: #0284c7 !important;
+  background-color: rgba(2, 132, 199, 0.12) !important;
+}
+html.dark .priority-opt.selected-priority,
+html.dark .priority-opt:has(input:checked) {
+  border-color: #38bdf8 !important;
+  background-color: rgba(56, 189, 248, 0.15) !important;
+}
+
+/* Month Card — with content-visibility for ultra-fast 120fps scrolling */
+.month-card {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 520px;
+  background-color: #ffffff;
+  border-color: #e2e8f0;
+}
+html.dark .month-card {
+  background-color: #0f172a;
+  border-color: #1e293b;
+}
+
+/* Calendar Grid Cell — Fixed Dimensions, Isolated Subtree for 0ms Instant Hover & Never Expands */
+.calendar-cell {
+  height: 98px;
+  min-height: 98px;
+  max-height: 98px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  contain: layout paint style;
+  transition: border-color 0.06s ease, background-color 0.06s ease;
+  position: relative;
+  outline: none;
+  overflow: hidden;
+  box-sizing: border-box;
+  will-change: border-color;
+}
+
+@media (max-width: 640px) {
+  .calendar-cell {
+    height: 58px !important;
+    min-height: 58px !important;
+    max-height: 58px !important;
+    padding: 2px !important;
+    border-radius: 8px !important;
+  }
+}
+
+/* Instantaneous hover without geometry shifts (eliminates 1-second lag) */
+.calendar-cell:hover {
+  border-color: #0284c7 !important;
+  background-color: #f0f9ff;
+  z-index: 5;
+}
+html.dark .calendar-cell:hover {
+  border-color: #38bdf8 !important;
+  background-color: #1e293b;
+  z-index: 5;
+}
+
+.calendar-cell.is-today {
+  border-color: #0284c7 !important;
+  background-color: #f0f9ff;
+}
+html.dark .calendar-cell.is-today {
+  border-color: #38bdf8 !important;
+  background-color: #132238;
+}
+
+/* Bookmark Ribbon Badge Design — Fixed Width, Strict Text Truncation */
+.bookmark-ribbon {
+  position: relative;
+  border-radius: 6px;
+  padding: 2.5px 5px;
+  font-size: 11px;
+  line-height: 1.25;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 640px) {
+  .bookmark-ribbon {
+    padding: 1px 2px !important;
+    font-size: 8.5px !important;
+    border-radius: 4px !important;
+    border-left-width: 2px !important;
+  }
+}
+
+.bookmark-ribbon.priority-urgent {
+  background: #ffe4e6;
+  border-left: 3px solid #f43f5e;
+  color: #9f1239;
+}
+html.dark .bookmark-ribbon.priority-urgent {
+  background: rgba(225, 29, 72, 0.25);
+  border-left: 3px solid #fb7185;
+  color: #fecdd3;
+}
+
+.bookmark-ribbon.priority-high {
+  background: #fef3c7;
+  border-left: 3px solid #f59e0b;
+  color: #92400e;
+}
+html.dark .bookmark-ribbon.priority-high {
+  background: rgba(245, 158, 11, 0.25);
+  border-left: 3px solid #fbbf24;
+  color: #fef3c7;
+}
+
+.bookmark-ribbon.priority-medium {
+  background: #e0f2fe;
+  border-left: 3px solid #0284c7;
+  color: #075985;
+}
+html.dark .bookmark-ribbon.priority-medium {
+  background: rgba(2, 132, 199, 0.25);
+  border-left: 3px solid #38bdf8;
+  color: #e0f2fe;
+}
+
+.bookmark-ribbon.priority-low {
+  background: #f1f5f9;
+  border-left: 3px solid #64748b;
+  color: #334155;
+}
+html.dark .bookmark-ribbon.priority-low {
+  background: rgba(100, 116, 139, 0.25);
+  border-left: 3px solid #94a3b8;
+  color: #f1f5f9;
+}
+
+.bookmark-ribbon.is-completed {
+  background: #dcfce7 !important;
+  border-left: 3px solid #10b981 !important;
+  color: #065f46 !important;
+  opacity: 0.85;
+}
+html.dark .bookmark-ribbon.is-completed {
+  background: rgba(16, 185, 129, 0.25) !important;
+  border-left: 3px solid #34d399 !important;
+  color: #a7f3d0 !important;
+}
+
+/* Bookmark Slideshow Carousel Animation — Hardware Accelerated */
+.slideshow-container {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  height: 44px;
+  overflow: hidden;
+  contain: strict;
+}
+
+@media (max-width: 640px) {
+  .slideshow-container {
+    height: 22px !important;
+  }
+  .slideshow-dots {
+    display: none !important;
+  }
+}
+
+.slideshow-slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate3d(0, 6px, 0);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.slideshow-slide.active-slide {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate3d(0, 0, 0);
+}
+
+/* Ticker indicator dots */
+.slideshow-dots {
+  display: flex;
+  gap: 3px;
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+}
+.slideshow-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 9999px;
+  background-color: rgba(148, 163, 184, 0.5);
+}
+.slideshow-dot.active {
+  width: 10px;
+  background-color: #0284c7;
+}
+html.dark .slideshow-dot.active {
+  background-color: #38bdf8;
+}
+
+/* Week Number Column */
+.week-num-badge {
+  font-family: 'Outfit', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f1f5f9;
+  border-radius: 8px;
+}
+html.dark .week-num-badge {
+  background-color: #1e293b;
+  color: #64748b;
+}
+
+/* Custom Link Button Pill */
+.custom-link-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #0284c7;
+  color: white;
+  text-decoration: none;
+  transition: background-color 0.1s ease;
+}
+.custom-link-pill:hover {
+  background: #0369a1;
+}
+
+/* Optimized Modal Transitions */
+.modal-backdrop {
+  transition: opacity 0.12s ease-out;
+}
+.modal-card {
+  transition: transform 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, opacity;
+}
+
+/* Print layout for PDF reviews */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #completedPrintableArea, #completedPrintableArea * {
+    visibility: visible;
+  }
+  #completedPrintableArea {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+}

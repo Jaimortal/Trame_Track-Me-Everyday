@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>trame — Track Me every day</title>
+  
+  <!-- Google Fonts: Plus Jakarta Sans & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            display: ['"Outfit"', 'sans-serif'],
+          },
+          colors: {
+            trame: {
+              50: '#f0f7ff',
+              100: '#e0effe',
+              200: '#bae0fd',
+              500: '#0284c7',
+              600: '#0369a1',
+              700: '#075985',
+              800: '#0c4a6e',
+              900: '#082f49',
+              accent: '#f59e0b',
+              bookmark: '#ef4444'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- html2pdf for generating PDF Review Reports -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body class="bg-slate-50 text-slate-800 transition-colors duration-300 min-h-screen relative overflow-x-hidden">
+
+  <!-- Ambient Dynamic Weather Canvas Background -->
+  <canvas id="weatherCanvas" class="pointer-events-none fixed inset-0 z-0 opacity-70"></canvas>
+  <div id="weatherBackdropGradient" class="pointer-events-none fixed inset-0 z-0 bg-gradient-to-b from-transparent via-transparent to-slate-900/10 dark:to-slate-950/60 transition-all duration-700"></div>
+
+  <!-- Main App Shell -->
+  <div class="relative z-10 flex flex-col min-h-screen">
+
+    <!-- Top Navigation Header with Notch Safe-Area Support -->
+    <header class="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 border-b border-slate-200 dark:border-slate-800 shadow-sm safe-top-pad">
+      <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 md:py-0 md:h-20 flex flex-col md:flex-row md:items-center justify-between gap-2.5 md:gap-4">
+        
+        <!-- Top Row on Mobile / Left on Desktop: Logo and Malaybalay Weather Quick Status -->
+        <div class="flex items-center justify-between w-full md:w-auto gap-3">
+          <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+            <div class="relative flex items-center justify-center w-8 h-8 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-sky-600 via-indigo-600 to-amber-500 shadow-md text-white font-extrabold text-sm sm:text-xl font-display tracking-tight">
+              <span>tr</span>
+              <div class="absolute -bottom-1 -right-1 w-3 h-3 sm:w-4 sm:h-4 bg-amber-400 rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center">
+                <i data-lucide="bookmark" class="w-1.5 h-1.5 sm:w-2.5 sm:h-2.5 text-slate-900 fill-current"></i>
+              </div>
+            </div>
+            <div>
+              <div class="flex items-center gap-1.5 sm:gap-2">
+                <h1 class="text-lg sm:text-2xl font-bold font-display tracking-tight text-slate-900 dark:text-white">
+                  tra<span class="text-sky-600 dark:text-sky-400">me</span>
+                </h1>
+                <span class="text-[9px] sm:text-[10px] font-semibold px-1.5 sm:px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 dark:bg-sky-950/80 dark:text-sky-300 border border-sky-200 dark:border-sky-800/60 uppercase tracking-wider">
+                  track &bull; me
+                </span>
+              </div>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 hidden lg:block">
+                Digital Activity Tracker &bull; JSON Storage &bull; Year Overview
+              </p>
+            </div>
+          </div>
+
+          <!-- Mobile Weather Quick Status Badge -->
+          <div class="flex md:hidden items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[10px] shadow-inner">
+            <i data-lucide="map-pin" class="w-3 h-3 text-sky-500"></i>
+            <span id="weatherTempMobile" class="font-extrabold text-slate-900 dark:text-white">--°C</span>
+            <span id="weatherConditionMobile" class="text-slate-500 dark:text-slate-400 truncate max-w-[80px]">Malaybalay</span>
+          </div>
+        </div>
+
+        <!-- Weather HUD (Desktop View) -->
+        <div id="weatherHud" class="hidden md:flex items-center gap-3 px-3.5 py-1.5 rounded-xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 text-xs shadow-inner">
+          <div id="weatherIconContainer" class="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center text-lg animate-pulse">
+            <i data-lucide="cloud-sun" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-1.5">
+              <span class="font-bold text-slate-800 dark:text-slate-200">Malaybalay City:</span>
+              <span id="weatherTemp" class="font-extrabold text-slate-900 dark:text-white">--°C</span>
+              <span id="weatherCondition" class="text-slate-500 dark:text-slate-400 capitalize">Loading...</span>
+            </div>
+            <div id="weatherOutdoorAdvice" class="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+              <i data-lucide="footprints" class="w-3 h-3"></i>
+              <span>Checking outdoor conditions...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Controls: Below "trame" on Mobile, Right on Desktop -->
+        <div class="flex items-center justify-between sm:justify-end gap-1.5 sm:gap-2.5 w-full md:w-auto pt-1.5 md:pt-0 border-t border-slate-100 dark:border-slate-800/80 md:border-0">
+          
+          <!-- Completed Tasks Overview Button -->
+          <button id="btnOpenCompleted" class="relative flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl text-[11px] sm:text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800/60 transition shadow-sm">
+            <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-500"></i>
+            <span>Completed</span>
+            <span id="badgeCompletedCount" class="px-1.5 py-0.2 text-[9px] sm:text-[10px] rounded-full bg-emerald-600 text-white font-bold">0</span>
+          </button>
+
+          <!-- Year Navigation Selector -->
+          <div class="flex items-center bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-0.5 sm:p-1 shadow-inner text-xs font-bold">
+            <button id="btnPrevYear" title="Previous Year" class="p-1 sm:p-1.5 rounded-lg hover:bg-white dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition">
+              <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+            </button>
+            <span id="currentYearDisplay" class="px-2 font-display text-xs sm:text-sm tracking-wide text-slate-900 dark:text-white">2026</span>
+            <button id="btnNextYear" title="Next Year" class="p-1 sm:p-1.5 rounded-lg hover:bg-white dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition">
+              <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+
+          <!-- Night Mode Toggle -->
+          <button id="btnThemeToggle" title="Toggle Night Mode" class="p-2 sm:p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition shadow-sm">
+            <i id="themeIcon" data-lucide="moon" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+          </button>
+
+          <!-- Quick Today Jump -->
+          <button id="btnJumpToday" class="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl text-[11px] sm:text-xs font-semibold bg-sky-600 hover:bg-sky-700 text-white shadow-sm transition flex items-center gap-1">
+            <i data-lucide="calendar" class="w-3 h-3 sm:w-3.5 sm:h-3.5"></i>
+            <span>Today</span>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Quick Month Navigation Strip (Sticky, smooth touch scroll without body scroll leak) -->
+      <div class="bg-white/95 dark:bg-slate-900/95 border-t border-slate-100 dark:border-slate-800/80 px-2 sm:px-4 py-1.5 overflow-x-auto no-scrollbar">
+        <div class="max-w-7xl mx-auto flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar" id="monthQuickLinks">
+          <!-- Dynamically populated Jan - Dec buttons -->
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content: Scrollable Yearly Calendar Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-6 space-y-8">
+      
+      <!-- Stats Overview Bar (Compact text on mobile view) -->
+      <section class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
+        <div class="p-2.5 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-2.5 sm:gap-3">
+          <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
+            <i data-lucide="calendar-check" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+          </div>
+          <div>
+            <div class="text-[9px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Tasks</div>
+            <div id="statTotalTasks" class="text-base sm:text-xl font-extrabold text-slate-900 dark:text-white font-display">0</div>
+          </div>
+        </div>
+
+        <div class="p-2.5 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-2.5 sm:gap-3">
+          <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+            <i data-lucide="clock" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+          </div>
+          <div>
+            <div class="text-[9px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Pending</div>
+            <div id="statPendingTasks" class="text-base sm:text-xl font-extrabold text-slate-900 dark:text-white font-display">0</div>
+          </div>
+        </div>
+
+        <div class="p-2.5 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-2.5 sm:gap-3">
+          <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+            <i data-lucide="check-circle" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+          </div>
+          <div>
+            <div class="text-[9px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Completed</div>
+            <div id="statCompletedTasks" class="text-base sm:text-xl font-extrabold text-slate-900 dark:text-white font-display">0</div>
+          </div>
+        </div>
+
+        <div class="p-2.5 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-2.5 sm:gap-3">
+          <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+            <i data-lucide="database" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+          </div>
+          <div>
+            <div class="text-[9px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Storage</div>
+            <div id="statDbSize" class="text-base sm:text-xl font-extrabold text-slate-900 dark:text-white font-display">-- KB</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Scrollable Year Calendar Container -->
+      <div id="yearCalendarContainer" class="space-y-12">
+        <!-- 12 Months will be dynamically rendered here -->
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-auto border-t border-slate-200 dark:border-slate-800 py-6 text-center text-xs text-slate-500 dark:text-slate-400 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md">
+      <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <span class="font-display font-bold text-slate-800 dark:text-slate-200">trame</span>
+          <span>&bull; Track & Me Digital Tracker</span>
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400">JSON Database</span>
+        </div>
+        <div>
+          <span>Weather Synced: Malaybalay City, Bukidnon (8.1575° N, 125.1278° E)</span>
+        </div>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- MODAL: TRACKER (Pop-up modal on date click) -->
+  <!-- ============================================================ -->
+  <div id="trackerModal" class="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 hidden opacity-0 transition-opacity duration-150 modal-overlay overscroll-contain safe-top-pad">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-lg w-full max-h-[92vh] sm:max-h-[90vh] flex flex-col overflow-hidden transform scale-95 transition-transform duration-150" id="trackerModalCard">
+      
+      <!-- Tracker Modal Header -->
+      <div class="px-3.5 py-2.5 sm:px-6 sm:py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900">
+        <div class="flex items-center gap-2 sm:gap-3">
+          <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-sky-600 text-white flex items-center justify-center shadow-md shrink-0">
+            <i data-lucide="bookmark" class="w-4 h-4 sm:w-5 sm:h-5 fill-current"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-1.5 sm:gap-2">
+              <h3 class="text-sm sm:text-lg font-bold font-display text-slate-900 dark:text-white">Tracker</h3>
+              <span id="trackerDateBadge" class="text-[9px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-md font-semibold bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300">
+                Oct 22, 2026
+              </span>
+            </div>
+            <p id="trackerDateSubtext" class="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">Thursday &bull; Week 43</p>
+          </div>
+        </div>
+        <button id="btnCloseTrackerModal" class="p-1.5 sm:p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+          <i data-lucide="x" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+        </button>
+      </div>
+
+      <!-- Tab Switcher (View Tasks vs Add Activity) -->
+      <div class="px-3.5 pt-2 sm:px-6 sm:pt-3 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2 sm:gap-3 bg-slate-50 dark:bg-slate-900 text-[11px] sm:text-xs font-semibold">
+        <button id="tabBtnViewTasks" class="pb-2 sm:pb-2.5 border-b-2 border-sky-600 text-sky-600 dark:text-sky-400 flex items-center gap-1.5 transition">
+          <i data-lucide="list-todo" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+          <span>View Tasks</span>
+          <span id="tabTaskCount" class="ml-1 px-1.5 py-0.2 rounded-full bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300 text-[9px] sm:text-[10px]">0</span>
+        </button>
+        <button id="tabBtnAddTask" class="pb-2 sm:pb-2.5 border-b-2 border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 flex items-center gap-1.5 transition">
+          <i data-lucide="plus-circle" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+          <span>Add More Activity</span>
+        </button>
+      </div>
+
+      <!-- Tracker Modal Body (Scrollable) -->
+      <div class="p-3.5 sm:p-6 overflow-y-auto flex-1 space-y-3 sm:space-y-4 modal-scroll-area overscroll-contain">
+        
+        <!-- PANEL 1: Task List on this Date -->
+        <div id="panelViewTasks" class="space-y-3">
+          <div id="taskListContainer" class="space-y-3">
+            <!-- Dynamically populated tasks for this date -->
+          </div>
+          <button id="btnSwitchToAddTask" class="w-full py-2.5 rounded-xl border-2 border-dashed border-sky-300 dark:border-sky-800/80 hover:border-sky-500 dark:hover:border-sky-600 text-sky-600 dark:text-sky-400 text-xs font-bold flex items-center justify-center gap-2 hover:bg-sky-50/50 dark:hover:bg-sky-950/30">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span>Add More Task to this Date</span>
+          </button>
+        </div>
+
+        <!-- PANEL 2: Add/Edit Task Form -->
+        <form id="trackerForm" class="hidden space-y-4">
+          <input type="hidden" id="taskEditId" value="" />
+          <input type="hidden" id="taskTargetDate" value="" />
+
+          <!-- Activity Title -->
+          <div>
+            <label for="taskTitle" class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+              Activity Title <span class="text-rose-500">*</span>
+            </label>
+            <input type="text" id="taskTitle" required placeholder="e.g. Submit Final Project, Visit Malaybalay Cathedral" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none" />
+          </div>
+
+          <!-- Description / Notes -->
+          <div>
+            <label for="taskDescription" class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+              Details / Notes (Optional)
+            </label>
+            <textarea id="taskDescription" rows="2" placeholder="Specific notes or reminders..." class="w-full px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none"></textarea>
+          </div>
+
+          <!-- Deadline Time & Category -->
+          <div class="grid grid-cols-2 gap-3">
+            <div class="relative" id="customTimePickerWrapper">
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                <i data-lucide="clock" class="w-3 h-3 inline text-sky-500"></i> Time Deadline
+              </label>
+              <input type="hidden" id="taskTime" value="" />
+              
+              <!-- Custom Time Trigger Button -->
+              <button type="button" id="btnOpenTimePicker" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs sm:text-sm flex items-center justify-between focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                <div class="flex items-center gap-1.5 truncate">
+                  <i data-lucide="clock" class="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0"></i>
+                  <span id="timePickerDisplayText" class="text-slate-400 dark:text-slate-500 text-xs">Set deadline time...</span>
+                </div>
+                <span id="btnClearTime" class="hidden p-0.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-rose-500" title="Clear Time">
+                  <i data-lucide="x" class="w-3 h-3"></i>
+                </span>
+              </button>
+
+              <!-- Custom Modern Time Picker Popover (No pointy 90° corners, Fully Dark Mode Aware) -->
+              <div id="customTimePickerDropdown" class="absolute left-0 bottom-full sm:bottom-auto sm:top-full mb-1.5 sm:mb-0 sm:mt-1.5 z-50 w-64 p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-3 hidden">
+                <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
+                  <span class="text-xs font-bold font-display text-slate-900 dark:text-white">Time Deadline</span>
+                  <!-- AM/PM Toggle Pill -->
+                  <div class="flex items-center p-0.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold">
+                    <button type="button" id="timePeriodAM" class="px-2.5 py-1 rounded-lg text-slate-600 dark:text-slate-300">AM</button>
+                    <button type="button" id="timePeriodPM" class="px-2.5 py-1 rounded-lg bg-sky-600 text-white">PM</button>
+                  </div>
+                </div>
+
+                <!-- Hour & Minute Controls -->
+                <div class="flex items-center justify-center gap-2.5 py-1">
+                  <!-- Hour Spinner -->
+                  <div class="flex flex-col items-center">
+                    <button type="button" id="btnHourUp" class="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400">
+                      <i data-lucide="chevron-up" class="w-4 h-4"></i>
+                    </button>
+                    <div id="timeHourDisplay" class="w-12 h-11 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-lg font-bold font-display text-slate-900 dark:text-white my-1">
+                      05
+                    </div>
+                    <button type="button" id="btnHourDown" class="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400">
+                      <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                    </button>
+                    <span class="text-[10px] text-slate-400 font-semibold mt-0.5">Hour</span>
+                  </div>
+
+                  <span class="text-xl font-bold text-slate-400 dark:text-slate-500 pb-5">:</span>
+
+                  <!-- Minute Spinner -->
+                  <div class="flex flex-col items-center">
+                    <button type="button" id="btnMinuteUp" class="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400">
+                      <i data-lucide="chevron-up" class="w-4 h-4"></i>
+                    </button>
+                    <div id="timeMinuteDisplay" class="w-12 h-11 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-lg font-bold font-display text-slate-900 dark:text-white my-1">
+                      00
+                    </div>
+                    <button type="button" id="btnMinuteDown" class="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400">
+                      <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                    </button>
+                    <span class="text-[10px] text-slate-400 font-semibold mt-0.5">Minute</span>
+                  </div>
+                </div>
+
+                <!-- Presets -->
+                <div class="grid grid-cols-3 gap-1 pt-1.5 border-t border-slate-100 dark:border-slate-800 text-[10px] font-semibold">
+                  <button type="button" data-preset-time="09:00 AM" class="time-preset-btn py-1 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-sky-50 dark:hover:bg-sky-950/60 hover:text-sky-600 dark:hover:text-sky-400 border border-slate-200 dark:border-slate-700/60 text-slate-600 dark:text-slate-300">
+                    9:00 AM
+                  </button>
+                  <button type="button" data-preset-time="02:00 PM" class="time-preset-btn py-1 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-sky-50 dark:hover:bg-sky-950/60 hover:text-sky-600 dark:hover:text-sky-400 border border-slate-200 dark:border-slate-700/60 text-slate-600 dark:text-slate-300">
+                    2:00 PM
+                  </button>
+                  <button type="button" data-preset-time="05:30 PM" class="time-preset-btn py-1 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-sky-50 dark:hover:bg-sky-950/60 hover:text-sky-600 dark:hover:text-sky-400 border border-slate-200 dark:border-slate-700/60 text-slate-600 dark:text-slate-300">
+                    5:30 PM
+                  </button>
+                </div>
+
+                <!-- Done / Clear Actions -->
+                <div class="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <button type="button" id="btnDismissTimePicker" class="px-2.5 py-1 text-[11px] font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
+                    Cancel
+                  </button>
+                  <button type="button" id="btnDoneTimePicker" class="px-3.5 py-1 rounded-xl text-xs font-bold bg-sky-600 hover:bg-sky-700 text-white shadow-sm">
+                    Set Time
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label for="taskCategory" class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                Category
+              </label>
+              <select id="taskCategory" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                <option value="Work">Work</option>
+                <option value="Study">Study</option>
+                <option value="Outdoor">Outdoor / Malaybalay</option>
+                <option value="Personal">Personal</option>
+                <option value="Milestone">Milestone</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Link & Rename Link (Customized Link Button) -->
+          <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60 space-y-3">
+            <div class="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+              <i data-lucide="link-2" class="w-4 h-4 text-sky-500"></i>
+              <span>Direct Link & Custom Button Label</span>
+            </div>
+            
+            <div>
+              <label for="taskLinkUrl" class="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                Destination Link URL
+              </label>
+              <input type="url" id="taskLinkUrl" placeholder="https://example.com/document" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none" />
+            </div>
+
+            <div>
+              <label for="taskLinkLabel" class="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                Rename Link (Custom Button Name, e.g. "View Document", "Open Github")
+              </label>
+              <input type="text" id="taskLinkLabel" placeholder="e.g. Open Assignment / Project Portal" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none" />
+              <p class="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
+                Instead of showing a raw long link, clicking the date displays a neat customized button.
+              </p>
+            </div>
+          </div>
+
+          <!-- Priority Level -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+              Priority
+            </label>
+            <div class="grid grid-cols-4 gap-2 text-xs">
+              <label class="priority-opt cursor-pointer flex flex-col items-center justify-center p-2 rounded-xl border border-slate-200 dark:border-slate-700 text-center">
+                <input type="radio" name="priority" value="low" class="sr-only" />
+                <span class="w-2.5 h-2.5 rounded-full bg-slate-400 mb-1"></span>
+                <span>Low</span>
+              </label>
+              <label class="priority-opt cursor-pointer flex flex-col items-center justify-center p-2 rounded-xl border border-slate-200 dark:border-slate-700 text-center selected-priority">
+                <input type="radio" name="priority" value="medium" checked class="sr-only" />
+                <span class="w-2.5 h-2.5 rounded-full bg-sky-500 mb-1"></span>
+                <span>Medium</span>
+              </label>
+              <label class="priority-opt cursor-pointer flex flex-col items-center justify-center p-2 rounded-xl border border-slate-200 dark:border-slate-700 text-center">
+                <input type="radio" name="priority" value="high" class="sr-only" />
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-500 mb-1"></span>
+                <span>High</span>
+              </label>
+              <label class="priority-opt cursor-pointer flex flex-col items-center justify-center p-2 rounded-xl border border-slate-200 dark:border-slate-700 text-center">
+                <input type="radio" name="priority" value="urgent" class="sr-only" />
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-500 mb-1"></span>
+                <span>Urgent</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Action Buttons: Save and Cancel -->
+          <div class="pt-2 flex items-center justify-end gap-2">
+            <button type="button" id="btnCancelTaskForm" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
+              Cancel
+            </button>
+            <button type="submit" id="btnSaveTask" class="px-5 py-2 rounded-xl text-xs font-bold bg-sky-600 hover:bg-sky-700 text-white shadow-md shadow-sky-600/30 flex items-center gap-1.5">
+              <i data-lucide="check" class="w-4 h-4"></i>
+              <span>Save Activity</span>
+            </button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- MODAL: COMPLETED TASKS OVERVIEW & PDF REVIEW -->
+  <!-- ============================================================ -->
+  <div id="completedModal" class="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 hidden opacity-0 transition-opacity duration-150 modal-overlay overscroll-contain safe-top-pad">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-3xl w-full max-h-[92vh] sm:max-h-[90vh] flex flex-col overflow-hidden">
+      
+      <!-- Completed Modal Header -->
+      <div class="px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900">
+        <div class="flex items-center gap-2 sm:gap-3">
+          <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-md shrink-0">
+            <i data-lucide="check-circle-2" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-sm sm:text-lg font-bold font-display text-slate-900 dark:text-white">Completed Tasks Overview</h3>
+            <p class="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">
+              Review completed milestones, export PDF review, or clean up to free JSON space.
+            </p>
+          </div>
+        </div>
+        <button id="btnCloseCompletedModal" class="p-1.5 sm:p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+          <i data-lucide="x" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+        </button>
+      </div>
+
+      <!-- Action Toolbar (Responsive for mobile screens) -->
+      <div class="px-3.5 py-2.5 sm:px-6 sm:py-3 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-3 bg-slate-50 dark:bg-slate-900">
+        <div class="flex items-center justify-between sm:justify-start gap-2">
+          <span class="text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400">Filter Year:</span>
+          <select id="completedYearFilter" class="text-xs px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white">
+            <option value="all">All Years</option>
+            <option value="2026" selected>2026</option>
+            <option value="2027">2027</option>
+          </select>
+        </div>
+
+        <div class="flex items-center gap-1.5 sm:gap-2">
+          <!-- Generate PDF Review -->
+          <button id="btnGeneratePdf" class="flex-1 sm:flex-none justify-center px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition flex items-center gap-1.5">
+            <i data-lucide="file-down" class="w-3.5 h-3.5"></i>
+            <span>Export PDF</span>
+          </button>
+
+          <!-- Clean Up / Purge Completed Tasks -->
+          <button id="btnCleanUpCompleted" class="flex-1 sm:flex-none justify-center px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-800 transition flex items-center gap-1.5">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            <span>Clean Up</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Completed Tasks List Container -->
+      <div class="p-6 overflow-y-auto flex-1 space-y-4 modal-scroll-area overscroll-contain" id="completedPrintableArea">
+        <div id="completedListHeader" class="hidden mb-4 p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100 text-indigo-900">
+          <h2 class="text-xl font-bold font-display">trame &bull; Yearly Completed Tasks Report</h2>
+          <p class="text-xs text-indigo-700" id="pdfReportSubtext">Generated report of all completed activities</p>
+        </div>
+        <div id="completedListContainer" class="space-y-3">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- CUSTOM CONFIRMATION POPUP / TOAST DIALOG (Replaces Browser Confirm) -->
+  <!-- ============================================================ -->
+  <div id="customConfirmModal" class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/80 hidden opacity-0 transition-opacity duration-150 modal-overlay overscroll-contain">
+    <div id="customConfirmCard" class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-md w-full p-6 space-y-4 transform scale-95 transition-all duration-150">
+      <div class="flex items-start gap-4">
+        <div id="confirmIconContainer" class="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 shadow-inner">
+          <i id="confirmIcon" data-lucide="trash-2" class="w-6 h-6"></i>
+        </div>
+        <div class="flex-1">
+          <h4 id="confirmTitle" class="text-base font-bold font-display text-slate-900 dark:text-white">
+            Confirm Action
+          </h4>
+          <p id="confirmMessage" class="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
+            Are you sure you want to proceed?
+          </p>
+        </div>
+      </div>
+      
+      <!-- Action buttons -->
+      <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800/80">
+        <button id="btnConfirmCancel" type="button" class="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+          Cancel
+        </button>
+        <button id="btnConfirmOk" type="button" class="px-5 py-2.5 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-md shadow-rose-600/30 transition flex items-center gap-1.5">
+          <span id="confirmOkIconSlot"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></span>
+          <span id="confirmOkText">Delete Permanently</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="toastNotification" class="fixed bottom-6 right-6 z-50 max-w-sm px-4 py-3 rounded-2xl bg-slate-900/90 text-white backdrop-blur-md border border-slate-700 shadow-xl flex items-center gap-3 transform translate-y-10 opacity-0 pointer-events-none transition-all duration-300">
+    <div id="toastIcon" class="text-emerald-400">
+      <i data-lucide="check-circle" class="w-5 h-5"></i>
+    </div>
+    <div id="toastMessage" class="text-xs font-semibold">
+      Action completed successfully
+    </div>
+  </div>
+
+  <!-- Application Scripts -->
+  <script src="js/api.js"></script>
+  <script src="js/weather.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
+

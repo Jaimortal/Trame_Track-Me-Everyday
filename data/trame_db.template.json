@@ -1,0 +1,25 @@
+{
+  "meta": {
+    "appName": "trame",
+    "description": "Track and Me - Activity & Task Calendar Tracker",
+    "version": "1.0.0",
+    "city": "Malaybalay City, Bukidnon"
+  },
+  "tasks": [
+    {
+      "id": "welcome-1",
+      "title": "Welcome to tra•me!",
+      "description": "This is your private, local activity calendar. Your personal data is stored purely in data/trame_db.json and is never shared or committed to Git.",
+      "date": "2026-10-22",
+      "time": "09:00",
+      "linkUrl": "https://github.com",
+      "linkLabel": "Documentation",
+      "category": "Personal",
+      "priority": "medium",
+      "completed": false,
+      "completedAt": null,
+      "createdAt": "2026-10-22T00:00:00.000Z"
+    }
+  ]
+}
+
